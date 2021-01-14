@@ -6,8 +6,7 @@ const request = require('request');
 const { fetchAuth } = require('./auth');
 const { sendChunks } = require('./chunk_uploader');
 
-//const CHUNK_SIZE = 100 * 1024 * 1024;
-const CHUNK_SIZE = 1 * 1024 * 1024;
+const CHUNK_SIZE = 100 * 1024 * 1024;
 const REQ_TIMEOUT = 10 * 60 * 1000;
 
 exports.sendFile = sendFile;

@@ -8,6 +8,7 @@ const request = require('request');
 exports.sendChunks = sendChunks;
 
 const REQ_TIMEOUT = 2 * 60 * 1000;
+const BACKOFF_RETRY_MS = 60 * 1000;
 const g_ipErrorMap = {};
 
 function sendChunks(params, done) {
@@ -159,6 +160,7 @@ function _sendChunk(params, done) {
   };
   const chunk_request_number = last_request_number++;
 
+  let url;
   async.series(
     [
       (done) => {
@@ -173,50 +175,136 @@ function _sendChunk(params, done) {
         }
       },
       (done) => {
-        const body = fs.createReadStream(source_path, stream_opts);
         if (!chunk.object_path) {
           chunk.object_path = 'segments/' + chunk.etag;
         }
-        const url = pathJoin(container, chunk.object_path);
-        const req = {
-          url,
-          method: 'PUT',
-          body,
-          headers: {
-            Etag: chunk.etag,
-          },
-        };
-        if (delete_at) {
-          req.headers['X-Delete-At'] = delete_at;
-        }
-        if (ip) {
-          req.localAddress = ip;
-        }
+        url = pathJoin(container, chunk.object_path);
+
         const opts = {
+          url,
+          etag: chunk.etag,
           endpoint_url,
           keystone_auth,
-          req,
+          delete_at,
         };
-        _send(opts, (err, body) => {
+        _checkChunk(opts, (err, is_done) => {
           if (err) {
-            errorLog('send chunk err:', err.code ? err.code : err, body);
-            setTimeout(() => {
-              g_ipErrorMap[ip] = (g_ipErrorMap[ip] || 0) + 1;
-              done(err);
-            }, 60000);
-          } else {
+            errorLog('check chunk err:', err);
+          } else if (is_done) {
             chunk.is_done = true;
-            done(err);
           }
+          done(err);
         });
+      },
+      (done) => {
+        if (chunk.is_done) {
+          done();
+        } else {
+          const body = fs.createReadStream(source_path, stream_opts);
+          const req = {
+            url,
+            method: 'PUT',
+            body,
+            headers: {
+              Etag: chunk.etag,
+            },
+          };
+          if (delete_at) {
+            req.headers['X-Delete-At'] = delete_at;
+          }
+          if (ip) {
+            req.localAddress = ip;
+          }
+          const opts = {
+            endpoint_url,
+            keystone_auth,
+            req,
+          };
+          _send(opts, (err, body) => {
+            if (err) {
+              errorLog('send chunk err:', err.code ? err.code : err, body);
+            } else {
+              chunk.is_done = true;
+            }
+            done(err);
+          });
+        }
       },
     ],
     (err) => {
-      done(err, chunk_request_number, chunk);
+      if (err) {
+        // backoff on retry
+        setTimeout(() => {
+          g_ipErrorMap[ip] = (g_ipErrorMap[ip] || 0) + 1;
+          done(err, chunk_request_number, chunk);
+        }, BACKOFF_RETRY_MS);
+      } else {
+        done(err, chunk_request_number, chunk);
+      }
     }
   );
 
   return chunk_request_number;
+}
+function _checkChunk(params, done) {
+  const { url, etag, endpoint_url, keystone_auth, delete_at } = params;
+  let is_done = false;
+  let existing_delete_at;
+  async.series(
+    [
+      (done) => {
+        const opts = {
+          req: {
+            method: 'HEAD',
+            url,
+          },
+          endpoint_url,
+          keystone_auth,
+        };
+        _send(opts, (err, _, response) => {
+          console.log('_checkChunk: err:', err);
+          if (err === 404) {
+            is_done = false;
+            err = null;
+          } else if (!err) {
+            const existing_etag = response.headers.etag;
+            if (existing_etag === etag) {
+              is_done = true;
+              const delete_s = response.headers['x-delete-at'];
+              existing_delete_at = parseInt(delete_s || '0');
+            }
+            console.log('_checkChunk:', existing_etag, existing_delete_at);
+          }
+          done(err);
+        });
+      },
+      (done) => {
+        if (!is_done) {
+          done();
+        } else if (!delete_at && !existing_delete_at) {
+          done();
+        } else if (existing_delete_at >= delete_at) {
+          done();
+        } else {
+          const opts = {
+            req: {
+              method: 'POST',
+              url,
+              headers: {
+                'X-Delete-At': delete_at,
+              },
+            },
+            endpoint_url,
+            keystone_auth,
+          };
+          _send(opts, done);
+        }
+      },
+    ],
+    (err) => {
+      done(err, is_done);
+    }
+  );
 }
 
 function _sortCount(a, b) {
