@@ -1,7 +1,6 @@
 {
   "name": "swift-multi",
   "version": "0.0.1",
-  "private": true,
   "main": "./src/index.js",
   "bin": {
     "swift-multi": "./src/cli.js"
