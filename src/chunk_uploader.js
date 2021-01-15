@@ -262,7 +262,6 @@ function _checkChunk(params, done) {
           keystone_auth,
         };
         _send(opts, (err, _, response) => {
-          console.log('_checkChunk: err:', err);
           if (err === 404) {
             is_done = false;
             err = null;
@@ -273,7 +272,6 @@ function _checkChunk(params, done) {
               const delete_s = response.headers['x-delete-at'];
               existing_delete_at = parseInt(delete_s || '0');
             }
-            console.log('_checkChunk:', existing_etag, existing_delete_at);
           }
           done(err);
         });
