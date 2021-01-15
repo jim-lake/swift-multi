@@ -1,6 +1,15 @@
 {
   "name": "swift-multi",
-  "version": "0.0.1",
+  "version": "0.0.2",
+  "description": "Multi stream upload to openstack swift store",
+  "author": {
+    "name": "Jim Lake"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:jim-lake/swift-multi.git"
+  },
   "main": "./src/index.js",
   "bin": {
     "swift-multi": "./src/cli.js"
