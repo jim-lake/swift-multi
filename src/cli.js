@@ -18,6 +18,7 @@ const USAGE = `Usage: $0 <upload|download> <container> <local_path>
   [--delete_at unixtime]
   [--delete_after seconds]
   [--resume boolean]
+  [--overwrite boolean]
 `;
 
 const argv = yargs.usage(USAGE).argv;
@@ -34,6 +35,7 @@ const ip_list = (argv.ip_list || '').split(',');
 const object_path = argv.object_path || local_path;
 const delete_after = parseInt(argv.delete_after);
 const resume = argv.resume || false;
+const overwrite = argv.overwrite || false;
 
 let delete_at = parseInt(argv.delete_at || '0');
 if (!delete_at && delete_after) {
@@ -109,6 +111,7 @@ if (method === 'upload') {
     container,
     object_path,
     resume,
+    overwrite,
     error_log: _errorLog,
     console_log: _consoleLog,
   };

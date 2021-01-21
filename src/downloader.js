@@ -19,6 +19,7 @@ function downloadFile(params, done) {
     object_path,
     dest_path,
     resume,
+    overwrite,
   } = params;
   const errorLog = params.error_log || function () {};
 
@@ -56,10 +57,10 @@ function downloadFile(params, done) {
             err = null;
           } else if (err) {
             errorLog('stat on file failed:', err);
-          } else if (!resume) {
+          } else if (!resume && !overwrite) {
             errorLog('file exists, aborting');
             err = 'file_exists';
-          } else {
+          } else if (resume) {
             start_pos = stats.size;
           }
           done(err);
@@ -74,6 +75,7 @@ function downloadFile(params, done) {
           dest_path,
           start: start_pos,
           resume,
+          overwrite,
         };
         _download(opts, (err) => {
           if (err) {
@@ -98,9 +100,12 @@ function _download(params, done) {
     dest_path,
     start,
     resume,
+    overwrite,
   } = params;
   let flags;
-  if (resume && start) {
+  if (overwrite) {
+    flags = 'w';
+  } else if (resume && start) {
     flags = 'r+';
   } else if (resume) {
     flags = 'w';
