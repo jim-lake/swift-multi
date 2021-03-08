@@ -1,5 +1,7 @@
 const request = require('request');
 
+const REQ_TIMEOUT = 10 * 1000;
+
 exports.fetchAuth = fetchAuth;
 
 function fetchAuth(params, done) {
@@ -17,7 +19,7 @@ function fetchAuth(params, done) {
       },
     },
     json: true,
-    timeout: 60 * 1000,
+    timeout: REQ_TIMEOUT,
   };
   request(opts, (err, response, body) => {
     const statusCode = response && response.statusCode;

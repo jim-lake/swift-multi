@@ -1,6 +1,6 @@
 {
   "name": "swift-multi",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "Multi stream upload to openstack swift store",
   "author": {
     "name": "Jim Lake"
@@ -14,6 +14,9 @@
   "bin": {
     "swift-multi": "./src/cli.js"
   },
+  "files": [
+    "./src/*"
+  ],
   "scripts": {
     "lint": "eslint src/**.js",
     "pretty": "prettier --write src/**.js"

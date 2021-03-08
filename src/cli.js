@@ -6,6 +6,7 @@ const SwiftMulti = require('./index');
 const { env } = process;
 
 const SEND_PER_IP_DEFAULT = 3;
+const MB = 1024 * 1024;
 
 const USAGE = `Usage: $0 <upload|download> <container> <local_path>
   [--object_path object_path]
@@ -19,6 +20,7 @@ const USAGE = `Usage: $0 <upload|download> <container> <local_path>
   [--delete_after seconds]
   [--resume boolean]
   [--overwrite boolean]
+  [--retry_count count]
 `;
 
 const argv = yargs.usage(USAGE).argv;
@@ -36,6 +38,7 @@ const object_path = argv.object_path || local_path;
 const delete_after = parseInt(argv.delete_after);
 const resume = argv.resume || false;
 const overwrite = argv.overwrite || false;
+const retry_count = parseInt(argv.retry_count) || 1;
 
 let delete_at = parseInt(argv.delete_at || '0');
 if (!delete_at && delete_after) {
@@ -77,6 +80,8 @@ if (delete_at) {
   console.log('Delete at:', delete_at);
 }
 
+const start_time = Date.now();
+
 if (method === 'upload') {
   const opts = {
     os_auth_url,
@@ -92,12 +97,21 @@ if (method === 'upload') {
     error_log: _errorLog,
     console_log: _consoleLog,
   };
-  SwiftMulti.sendFile(opts, (err) => {
+  SwiftMulti.sendFile(opts, (err, byte_count) => {
     if (err) {
       console.error('failed:', err);
       process.exit(-1);
     } else {
-      console.log('success!');
+      const delta_s = (Date.now() - start_time) / 1000;
+      const mbps = ((byte_count * 8) / MB / delta_s).toFixed(3);
+      console.log(
+        'uploaded:',
+        local_path,
+        'time:',
+        delta_s + 's',
+        'speed:',
+        mbps + 'mbps'
+      );
       process.exit(0);
     }
   });
@@ -112,15 +126,25 @@ if (method === 'upload') {
     object_path,
     resume,
     overwrite,
+    retry_count,
     error_log: _errorLog,
     console_log: _consoleLog,
   };
-  SwiftMulti.downloadFile(opts, (err) => {
+  SwiftMulti.downloadFile(opts, (err, byte_count) => {
     if (err) {
       console.error('failed:', err);
       process.exit(-1);
     } else {
-      console.log('success!');
+      const delta_s = (Date.now() - start_time) / 1000;
+      const mbps = ((byte_count * 8) / MB / delta_s).toFixed(3);
+      console.log(
+        'downloaded:',
+        local_path,
+        'time:',
+        delta_s + 's',
+        'speed:',
+        mbps + 'mbps'
+      );
       process.exit(0);
     }
   });

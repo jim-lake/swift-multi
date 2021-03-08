@@ -31,6 +31,7 @@ function sendFile(params, done) {
   let keystone_auth;
   let file_size;
   const chunk_list = [];
+  let byte_count = 0;
   async.series(
     [
       (done) => {
@@ -103,9 +104,11 @@ function sendFile(params, done) {
           delete_at,
           error_log: errorLog,
         };
-        sendChunks(opts, (err) => {
+        sendChunks(opts, (err, count) => {
           if (err) {
             errorLog('send_chunks failed, err:', err);
+          } else {
+            byte_count = count;
           }
           done(err);
         });
@@ -145,7 +148,7 @@ function sendFile(params, done) {
       },
     ],
     (err) => {
-      done(err);
+      done(err, byte_count);
     }
   );
 }

@@ -32,12 +32,13 @@ function sendChunks(params, done) {
   const unsent_list = chunk_list.slice();
 
   let is_complete = false;
+  let byte_count = 0;
 
   function _startSends() {
     if (_isSendDone(chunk_list)) {
       if (!is_complete) {
         is_complete = true;
-        done();
+        done(null, byte_count);
       }
     } else if (inflight_list.length < max_inflight_count) {
       const { chunk, ip } = _findNextChunk({
@@ -70,7 +71,7 @@ function sendChunks(params, done) {
     if (!chunk.is_done) {
       unsent_list.push(chunk);
     } else {
-      //console.log('chunk done:', chunk.start);
+      byte_count += chunk.size;
     }
     _startSends();
   }
