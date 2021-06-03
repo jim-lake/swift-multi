@@ -22,6 +22,7 @@ function sendChunks(params, done) {
     send_per_ip,
     delete_at,
     error_log,
+    progress,
   } = params;
 
   const max_inflight_count = ip_list.length
@@ -56,6 +57,7 @@ function sendChunks(params, done) {
           ip,
           delete_at,
           error_log,
+          progress,
         };
         const chunk_request_number = _sendChunk(opts, _chunkDone);
         inflight_list.push({ chunk_request_number, ip, chunk });
@@ -153,6 +155,7 @@ function _sendChunk(params, done) {
     chunk,
     ip,
     delete_at,
+    progress,
   } = params;
   const errorLog = params.error_log;
   const stream_opts = {
@@ -187,6 +190,7 @@ function _sendChunk(params, done) {
           endpoint_url,
           keystone_auth,
           delete_at,
+          error_log: errorLog,
         };
         _checkChunk(opts, (err, is_done) => {
           if (err) {
@@ -210,6 +214,13 @@ function _sendChunk(params, done) {
               Etag: chunk.etag,
             },
           };
+          if (progress) {
+            let total = 0;
+            body.on('data', (chunk) => {
+              total += chunk.length;
+              progress(chunk.length, total);
+            });
+          }
           if (delete_at) {
             req.headers['X-Delete-At'] = delete_at;
           }
@@ -248,7 +259,14 @@ function _sendChunk(params, done) {
   return chunk_request_number;
 }
 function _checkChunk(params, done) {
-  const { url, etag, endpoint_url, keystone_auth, delete_at } = params;
+  const {
+    url,
+    etag,
+    endpoint_url,
+    keystone_auth,
+    delete_at,
+    error_log,
+  } = params;
   let is_done = false;
   let existing_delete_at;
   async.series(
@@ -262,10 +280,27 @@ function _checkChunk(params, done) {
           endpoint_url,
           keystone_auth,
         };
-        _send(opts, (err, _, response) => {
+        _send(opts, (err, body, response) => {
           if (err === 404) {
             is_done = false;
             err = null;
+          } else if (err === 503) {
+            error_log(
+              '_checkChunk: url:',
+              url,
+              ', got a 503 treating like 404'
+            );
+            is_done = false;
+            err = null;
+          } else if (err) {
+            error_log(
+              '_checkChunk: url:',
+              url,
+              'err:',
+              err,
+              body,
+              response.headers
+            );
           } else if (!err) {
             const existing_etag = response.headers.etag;
             if (existing_etag === etag) {

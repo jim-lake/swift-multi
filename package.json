@@ -1,6 +1,6 @@
 {
   "name": "swift-multi",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "description": "Multi stream upload to openstack swift store",
   "author": {
     "name": "Jim Lake"

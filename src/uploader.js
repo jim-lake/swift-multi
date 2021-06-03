@@ -23,6 +23,7 @@ function sendFile(params, done) {
     ip_list,
     send_per_ip,
     delete_at,
+    progress,
   } = params;
   const errorLog = params.error_log || function () {};
   const consoleLog = params.console_log || function () {};
@@ -103,6 +104,7 @@ function sendFile(params, done) {
           send_per_ip,
           delete_at,
           error_log: errorLog,
+          progress,
         };
         sendChunks(opts, (err, count) => {
           if (err) {
