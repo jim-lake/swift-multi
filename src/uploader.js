@@ -8,6 +8,7 @@ const { sendChunks } = require('./chunk_uploader');
 
 const CHUNK_SIZE = 100 * 1024 * 1024;
 const REQ_TIMEOUT = 10 * 60 * 1000;
+const SEND_RETRY_COUNT = 5;
 
 exports.sendFile = sendFile;
 
@@ -140,7 +141,7 @@ function sendFile(params, done) {
             req.headers['X-Delete-At'] = delete_at;
           }
           const opts = { req, endpoint_url, keystone_auth };
-          _send(opts, (err, body) => {
+          _sendRetry(opts, (err, body) => {
             if (err) {
               errorLog('create_slo err:', err, body);
             }
@@ -153,6 +154,17 @@ function sendFile(params, done) {
       done(err, byte_count);
     }
   );
+}
+
+function _sendRetry(params, done) {
+  const opts = {
+    times: SEND_RETRY_COUNT,
+    interval: (count) => {
+      const interval = 50 * Math.pow(3, count);
+      return interval;
+    },
+  };
+  async.retry(opts, (done) => _send(params, done), done);
 }
 
 function _send(opts, done) {
