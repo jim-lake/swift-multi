@@ -9,6 +9,8 @@ const { sendChunks } = require('./chunk_uploader');
 const CHUNK_SIZE = 100 * 1024 * 1024;
 const REQ_TIMEOUT = 10 * 60 * 1000;
 const SEND_RETRY_COUNT = 5;
+const MIN_RETRY_MS = 1000;
+const MAX_RETRY_MS = 30 * 1000;
 
 exports.sendFile = sendFile;
 
@@ -159,10 +161,7 @@ function sendFile(params, done) {
 function _sendRetry(params, done) {
   const opts = {
     times: SEND_RETRY_COUNT,
-    interval: (count) => {
-      const interval = 50 * Math.pow(3, count);
-      return interval;
-    },
+    interval: _retryInterval,
   };
   async.retry(opts, (done) => _send(params, done), done);
 }
@@ -182,4 +181,7 @@ function _send(opts, done) {
     }
     done(err, body, response);
   });
+}
+function _retryInterval(retryCount) {
+  return Math.min(MIN_RETRY_MS + 1000 * Math.pow(2, retryCount), MAX_RETRY_MS);
 }
