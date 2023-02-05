@@ -9,6 +9,7 @@ exports.sendChunks = sendChunks;
 
 const REQ_TIMEOUT = 2 * 60 * 1000;
 const BACKOFF_RETRY_MS = 60 * 1000;
+
 const g_ipErrorMap = {};
 
 function sendChunks(params, done) {
@@ -25,6 +26,10 @@ function sendChunks(params, done) {
     progress,
   } = params;
 
+  chunk_list.forEach((chunk) => {
+    chunk.fatal_error = false;
+  });
+
   const max_inflight_count = ip_list.length
     ? ip_list.length * send_per_ip
     : send_per_ip;
@@ -36,7 +41,12 @@ function sendChunks(params, done) {
   let byte_count = 0;
 
   function _startSends() {
-    if (_isSendDone(chunk_list)) {
+    if (_isFatal(chunk_list)) {
+      if (!is_complete) {
+        is_complete = true;
+        done('send_failed');
+      }
+    } else if (_isSendDone(chunk_list)) {
       if (!is_complete) {
         is_complete = true;
         done(null, byte_count);
@@ -81,6 +91,9 @@ function sendChunks(params, done) {
   _startSends();
 }
 
+function _isFatal(chunk_list) {
+  return chunk_list.some((chunk) => chunk.fatal_error);
+}
 function _isSendDone(chunk_list) {
   return chunk_list.every((chunk) => chunk.is_done);
 }
@@ -235,6 +248,9 @@ function _sendChunk(params, done) {
           _send(opts, (err, body) => {
             if (err) {
               errorLog('send chunk err:', err.code ? err.code : err, body);
+              if (err === 422 || err === 404) {
+                chunk.fatal_error = true;
+              }
             } else {
               chunk.is_done = true;
             }
@@ -244,7 +260,7 @@ function _sendChunk(params, done) {
       },
     ],
     (err) => {
-      if (err) {
+      if (err && !chunk.fatal_error) {
         // backoff on retry
         setTimeout(() => {
           g_ipErrorMap[ip] = (g_ipErrorMap[ip] || 0) + 1;
