@@ -178,15 +178,8 @@ function _downloadTry(params, done) {
 }
 
 function _download(params, done) {
-  const {
-    keystone_auth,
-    url,
-    dest_path,
-    try_count,
-    start,
-    resume,
-    overwrite,
-  } = params;
+  const { keystone_auth, url, dest_path, try_count, start, resume, overwrite } =
+    params;
   let byte_count = 0;
   let flags;
   if (try_count > 0) {

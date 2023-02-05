@@ -21,6 +21,7 @@ const USAGE = `Usage: $0 <upload|download> <container> <local_path>
   [--resume boolean]
   [--overwrite boolean]
   [--retry_count count]
+  [--sha256 file_hash]
 `;
 
 const argv = yargs.usage(USAGE).argv;
@@ -39,6 +40,7 @@ const delete_after = parseInt(argv.delete_after);
 const resume = argv.resume || false;
 const overwrite = argv.overwrite || false;
 const retry_count = parseInt(argv.retry_count) || 1;
+const sha256_hash = String(argv.sha256 || '');
 
 let delete_at = parseInt(argv.delete_at || '0');
 if (!delete_at && delete_after) {
@@ -94,6 +96,7 @@ if (method === 'upload') {
     ip_list,
     send_per_ip,
     delete_at,
+    sha256_hash,
     error_log: _errorLog,
     console_log: _consoleLog,
   };

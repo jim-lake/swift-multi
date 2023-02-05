@@ -259,14 +259,8 @@ function _sendChunk(params, done) {
   return chunk_request_number;
 }
 function _checkChunk(params, done) {
-  const {
-    url,
-    etag,
-    endpoint_url,
-    keystone_auth,
-    delete_at,
-    error_log,
-  } = params;
+  const { url, etag, endpoint_url, keystone_auth, delete_at, error_log } =
+    params;
   let is_done = false;
   let existing_delete_at;
   async.series(

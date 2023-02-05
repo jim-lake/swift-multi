@@ -1,4 +1,5 @@
 const async = require('async');
+const crypto = require('crypto');
 const fs = require('fs');
 const { join: pathJoin } = require('path');
 const request = require('request');
@@ -26,6 +27,7 @@ function sendFile(params, done) {
     ip_list,
     send_per_ip,
     delete_at,
+    sha256_hash,
     progress,
   } = params;
   const errorLog = params.error_log || function () {};
@@ -95,6 +97,23 @@ function sendFile(params, done) {
           }
           done(err);
         });
+      },
+      (done) => {
+        if (sha256_hash) {
+          const opts = {
+            source_path,
+            chunk_list,
+            sha256_hash,
+          };
+          _hashChunkList(opts, (err) => {
+            if (err) {
+              errorLog('prehash file failed:', err);
+            }
+            done(err);
+          });
+        } else {
+          done();
+        }
       },
       (done) => {
         const opts = {
@@ -184,4 +203,49 @@ function _send(opts, done) {
 }
 function _retryInterval(retryCount) {
   return Math.min(MIN_RETRY_MS + 1000 * Math.pow(2, retryCount), MAX_RETRY_MS);
+}
+function _hashChunkList(params, done) {
+  const { source_path, chunk_list, sha256_hash } = params;
+  const hash = crypto.createHash('sha256');
+
+  async.eachSeries(
+    chunk_list,
+    (chunk, done) => {
+      _hashChunk(source_path, chunk, hash, done);
+    },
+    (err) => {
+      if (!err) {
+        const digest = hash.digest('hex');
+        if (digest !== sha256_hash.toLowerCase()) {
+          err = 'hash_mismatch';
+        }
+      }
+      done(err);
+    }
+  );
+}
+function _hashChunk(src, chunk, global_hash, done) {
+  const chunk_hash = crypto.createHash('md5');
+  const stream_opts = {
+    start: chunk.start,
+    end: chunk.end,
+  };
+  const stream = fs.createReadStream(src, stream_opts);
+  stream.on('error', (err) => {
+    if (done) {
+      done(err);
+      done = null;
+    }
+  });
+  stream.on('data', (chunk) => {
+    chunk_hash.update(chunk);
+    global_hash.update(chunk);
+  });
+  stream.on('end', () => {
+    if (done) {
+      chunk.etag = chunk_hash.digest('hex');
+      done();
+      done = null;
+    }
+  });
 }
