@@ -16,7 +16,7 @@ function downloadFile(params, done) {
     os_auth_url,
     os_password,
     os_username,
-    os_tenant_name,
+    os_project_name,
     container,
     object_path,
     dest_path,
@@ -38,7 +38,7 @@ function downloadFile(params, done) {
           os_auth_url,
           os_password,
           os_username,
-          os_tenant_name,
+          os_project_name,
         };
         fetchAuth(opts, (err, token, service_map) => {
           if (err) {
@@ -46,7 +46,7 @@ function downloadFile(params, done) {
           } else {
             keystone_auth = token;
             if (service_map.swift && service_map.swift[0]) {
-              const endpoint_url = service_map.swift[0].publicURL;
+              const endpoint_url = service_map.swift[0].url;
               if (!endpoint_url) {
                 errorLog('no swift url');
                 err = 'no_endpoint';

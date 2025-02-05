@@ -5,17 +5,25 @@ const REQ_TIMEOUT = 10 * 1000;
 exports.fetchAuth = fetchAuth;
 
 function fetchAuth(params, done) {
-  const { os_auth_url, os_password, os_username, os_tenant_name } = params;
+  const { os_auth_url, os_password, os_username, os_project_name } = params;
   const opts = {
-    url: os_auth_url + 'tokens',
+    url: os_auth_url + '/auth/tokens',
     method: 'POST',
     body: {
       auth: {
-        passwordCredentials: {
-          password: os_password,
-          username: os_username,
+        scope: {
+          project: { domain: { id: 'default' }, name: os_project_name },
         },
-        tenantName: os_tenant_name,
+        identity: {
+          password: {
+            user: {
+              domain: { id: 'default' },
+              password: os_password,
+              name: os_username,
+            },
+          },
+          methods: ['password'],
+        },
       },
     },
     json: true,
@@ -28,13 +36,11 @@ function fetchAuth(params, done) {
     }
     let token_id;
     const service_map = {};
-    if (!err && body) {
-      const access = body.access;
-      const token = access && access.token;
-      token_id = token && token.id;
-      const serviceCatalog = access && access.serviceCatalog;
-      if (serviceCatalog && serviceCatalog.length > 0) {
-        serviceCatalog.forEach((service) => {
+    if (!err && body && response) {
+      token_id = response.headers && response.headers['x-subject-token'];
+      const catalog = body.token && body.token.catalog;
+      if (catalog && catalog.length > 0) {
+        catalog.forEach((service) => {
           const { name, endpoints } = service;
           service_map[name] = endpoints;
         });

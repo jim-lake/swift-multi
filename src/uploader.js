@@ -20,7 +20,7 @@ function sendFile(params, done) {
     os_auth_url,
     os_password,
     os_username,
-    os_tenant_name,
+    os_project_name,
     source_path,
     container,
     object_path,
@@ -45,7 +45,7 @@ function sendFile(params, done) {
           os_auth_url,
           os_password,
           os_username,
-          os_tenant_name,
+          os_project_name,
         };
         fetchAuth(opts, (err, token, service_map) => {
           if (err) {
@@ -53,7 +53,7 @@ function sendFile(params, done) {
           } else {
             keystone_auth = token;
             if (service_map.swift && service_map.swift[0]) {
-              endpoint_url = service_map.swift[0].publicURL;
+              endpoint_url = service_map.swift[0].url;
             }
             if (!endpoint_url) {
               errorLog('no swift url');

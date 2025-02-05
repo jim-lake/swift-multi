@@ -11,7 +11,7 @@ const MB = 1024 * 1024;
 const USAGE = `Usage: $0 <upload|download> <container> <local_path>
   [--object_path object_path]
   [--os_auth_url url]
-  [--os_tenant_name tenant]
+  [--os_project_name project]
   [--os_username username]
   [--os_password password]
   [--send_per_ip count]
@@ -31,7 +31,7 @@ const container = argv._[1];
 const local_path = argv._[2];
 const os_auth_url = argv.os_auth_url || env.OS_AUTH_URL;
 const os_password = argv.os_password || env.OS_PASSWORD;
-const os_tenant_name = argv.os_tenant_name || env.OS_TENANT_NAME;
+const os_project_name = argv.os_project_name || env.OS_PROJECT_NAME;
 const os_username = argv.os_username || env.OS_USERNAME;
 const send_per_ip = argv.send_per_ip || SEND_PER_IP_DEFAULT;
 const ip_list = (argv.ip_list || '').split(',');
@@ -51,7 +51,7 @@ if (argv.help) {
   yargs.showHelp('log');
   process.exit(-1);
 }
-if (!os_auth_url || !os_password || !os_tenant_name || !os_username) {
+if (!os_auth_url || !os_password || !os_project_name || !os_username) {
   console.error('No auth found.');
   process.exit(-254);
 }
@@ -89,7 +89,7 @@ if (method === 'upload') {
     os_auth_url,
     os_username,
     os_password,
-    os_tenant_name,
+    os_project_name,
     source_path: local_path,
     container,
     object_path,
@@ -123,7 +123,7 @@ if (method === 'upload') {
     os_auth_url,
     os_username,
     os_password,
-    os_tenant_name,
+    os_project_name,
     dest_path: local_path,
     container,
     object_path,
